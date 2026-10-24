@@ -13,7 +13,7 @@ import (
 
 type MemberService interface {
 	CreateMember(ctx context.Context, req dto.MemberRequest) (*entity.MemberEntity, error)
-	GetMemberWithBalance(ctx context.Context, memberID int64) (*dto.MemberBalanceResponse, error)
+	GetMemberDetails(ctx context.Context, memberID int64) (*dto.MemberBalanceResponse, error)
 }
 
 type memberService struct {
@@ -49,7 +49,7 @@ func (s *memberService) CreateMember(ctx context.Context, req dto.MemberRequest)
 	return member, nil
 }
 
-func (s *memberService) GetMemberWithBalance(ctx context.Context, memberID int64) (*dto.MemberBalanceResponse, error) {
+func (s *memberService) GetMemberDetails(ctx context.Context, memberID int64) (*dto.MemberBalanceResponse, error) {
 	member, err := s.memberRepo.GetByID(ctx, memberID)
 	if err != nil {
 		return nil, err

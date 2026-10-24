@@ -9,6 +9,8 @@ import (
 	entity "visa_assignment/models/entity"
 	"visa_assignment/repository"
 	"visa_assignment/utils"
+
+	"github.com/rs/zerolog"
 )
 
 type RewardService interface {
@@ -30,7 +32,12 @@ func NewRewardService(memberRepo repository.MemberRepository, rewardRepo reposit
 
 func (s *rewardService) CreateReward(ctx context.Context, req dto.RewardRequest) (*entity.RewardEntity, error) {
 	if err := validateRewardRequest(&req); err != nil {
-		utils.LogRequest(ctx, "reward_service create validation_failed error=%q", err)
+		zerolog.Ctx(ctx).Warn().
+			Int64("member_id", req.MemberID).
+			Int("point_type_id", req.PointTypeID).
+			Int64("points", req.Points).
+			Err(err).
+			Msg("Reward request validation failed")
 		return nil, err
 	}
 

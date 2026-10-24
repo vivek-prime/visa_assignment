@@ -9,6 +9,7 @@ import (
 	"visa_assignment/utils"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 )
 
 type MemberController struct {
@@ -27,21 +28,29 @@ func NewMemberController(memberService service.MemberService, rewardService serv
 func (mc *MemberController) CreateMember(ctx *gin.Context) {
 	var req dto.MemberRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		utils.LogRequest(ctx.Request.Context(), "create_member rejected invalid_payload error=%q", err)
+		zerolog.Ctx(ctx.Request.Context()).Error().
+			Err(err).
+			Msg("Create member request rejected: invalid payload")
 
 		utils.RespondWithError(ctx, http.StatusBadRequest, "invalid request payload: "+err.Error())
 		return
 	}
 
-	utils.LogRequest(ctx.Request.Context(), "create_member accepted")
+	zerolog.Ctx(ctx.Request.Context()).Info().
+		Interface("request", req).
+		Msg("Create member request accepted")
 	member, err := mc.memberService.CreateMember(ctx.Request.Context(), req)
 	if err != nil {
-		utils.LogRequest(ctx.Request.Context(), "create_member failed error=%q", err)
+		zerolog.Ctx(ctx.Request.Context()).Error().
+			Err(err).
+			Msg("Failed to create member")
 		utils.HandleServiceError(ctx, err)
 		return
 	}
 
-	utils.LogRequest(ctx.Request.Context(), "create_member response member_id=%d", member.MemberID)
+	zerolog.Ctx(ctx.Request.Context()).Info().
+		Int64("member_id", member.MemberID).
+		Msg("Member created")
 	ctx.JSON(http.StatusCreated, member)
 }
 
@@ -49,20 +58,27 @@ func (mc *MemberController) CreateMember(ctx *gin.Context) {
 func (mc *MemberController) GetMember(c *gin.Context) {
 	memberID, err := strconv.ParseInt(c.Param("memberId"), 10, 64)
 	if err != nil || memberID <= 0 {
-		utils.LogRequest(c.Request.Context(), "get_member rejected invalid_member_id value=%q", c.Param("memberId"))
+		zerolog.Ctx(c.Request.Context()).Error().
+			Str("member_id", c.Param("memberId")).
+			Msg("Get member request rejected: invalid member ID")
 		utils.RespondWithError(c, http.StatusBadRequest, "invalid member_id parameter")
 		return
 	}
 
-	utils.LogRequest(c.Request.Context(), "get_member member_id=%d", memberID)
-	member, err := mc.memberService.GetMemberWithBalance(c.Request.Context(), memberID)
+	member, err := mc.memberService.GetMemberDetails(c.Request.Context(), memberID)
 	if err != nil {
-		utils.LogRequest(c.Request.Context(), "get_member failed member_id=%d error=%q", memberID, err)
+		zerolog.Ctx(c.Request.Context()).Error().
+			Int64("member_id", memberID).
+			Err(err).
+			Msg("Failed to get member")
 		utils.HandleServiceError(c, err)
 		return
 	}
 
-	utils.LogRequest(c.Request.Context(), "get_member response : %+v", member)
+	zerolog.Ctx(c.Request.Context()).Info().
+		Interface("response", member).
+		Int64("member_id", member.MemberID).
+		Msg("Member details retrieved")
 	c.JSON(http.StatusOK, member)
 }
 
@@ -70,19 +86,26 @@ func (mc *MemberController) GetMember(c *gin.Context) {
 func (mc *MemberController) GetMemberRewards(c *gin.Context) {
 	memberID, err := strconv.ParseInt(c.Param("memberId"), 10, 64)
 	if err != nil || memberID <= 0 {
-		utils.LogRequest(c.Request.Context(), "get_member_rewards rejected invalid_member_id value=%q", c.Param("memberId"))
+		zerolog.Ctx(c.Request.Context()).Error().
+			Str("member_id", c.Param("memberId")).
+			Msg("List member rewards request rejected: invalid member ID")
 		utils.RespondWithError(c, http.StatusBadRequest, "invalid member_id parameter")
 		return
 	}
 
-	utils.LogRequest(c.Request.Context(), "get_member_rewards , member_id=%d", memberID)
 	rewards, err := mc.rewardService.GetRewardsByMemberID(c.Request.Context(), memberID)
 	if err != nil {
-		utils.LogRequest(c.Request.Context(), "get_member_rewards failed member_id=%d error=%q", memberID, err)
+		zerolog.Ctx(c.Request.Context()).Error().
+			Int64("member_id", memberID).
+			Err(err).
+			Msg("Failed to list member rewards")
 		utils.HandleServiceError(c, err)
 		return
 	}
 
-	utils.LogRequest(c.Request.Context(), "get_member_rewards response : %+v", rewards)
+	zerolog.Ctx(c.Request.Context()).Info().
+		Int64("member_id", memberID).
+		Interface("rewards", rewards).
+		Msg("Member rewards retrieved")
 	c.JSON(http.StatusOK, rewards)
 }

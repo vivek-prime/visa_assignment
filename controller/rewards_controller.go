@@ -8,6 +8,7 @@ import (
 	"visa_assignment/utils"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 )
 
 type RewardController struct {
@@ -24,21 +25,28 @@ func NewRewardController(rewardService service.RewardService) *RewardController 
 func (rc *RewardController) CreateReward(c *gin.Context) {
 	var req dto.RewardRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.LogRequest(c.Request.Context(), "create_reward rejected invalid_payload error=%q", err)
+		zerolog.Ctx(c.Request.Context()).Error().
+			Err(err).
+			Msg("Create reward request rejected: invalid payload")
 		utils.RespondWithError(c, http.StatusBadRequest, "invalid request payload: "+err.Error())
 		return
 	}
 
-	utils.LogRequest(
-		c.Request.Context(),
-		"create_reward accepted : %+v", req)
+	zerolog.Ctx(c.Request.Context()).Info().
+		Interface("request", req).
+		Msg("Create reward request accepted")
+
 	reward, err := rc.rewardService.CreateReward(c.Request.Context(), req)
 	if err != nil {
-		utils.LogRequest(c.Request.Context(), "create_reward failed member_id=%d error=%q", req.MemberID, err)
+		zerolog.Ctx(c.Request.Context()).Error().
+			Err(err).
+			Msg("Failed to create reward")
 		utils.HandleServiceError(c, err)
 		return
 	}
 
-	utils.LogRequest(c.Request.Context(), "create_reward response : %+v", reward)
+	zerolog.Ctx(c.Request.Context()).Info().
+		Interface("reward_id", reward.RewardID).
+		Msg("Reward entry recorded")
 	c.JSON(http.StatusCreated, reward)
 }

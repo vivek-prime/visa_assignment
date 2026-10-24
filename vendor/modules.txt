@@ -124,6 +124,9 @@ github.com/klauspost/cpuid/v2/topology
 ## explicit; go 1.24.0
 github.com/leodido/go-urn
 github.com/leodido/go-urn/scim/schema
+# github.com/mattn/go-colorable v0.1.13
+## explicit; go 1.15
+github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.24
 ## explicit; go 1.20
 github.com/mattn/go-isatty
@@ -178,6 +181,12 @@ github.com/quic-go/quic-go/qlog
 github.com/quic-go/quic-go/qlogwriter
 github.com/quic-go/quic-go/qlogwriter/jsontext
 github.com/quic-go/quic-go/quicvarint
+# github.com/rs/zerolog v1.34.0
+## explicit; go 1.15
+github.com/rs/zerolog
+github.com/rs/zerolog/internal/cbor
+github.com/rs/zerolog/internal/json
+github.com/rs/zerolog/log
 # github.com/shopspring/decimal v1.6.0
 ## explicit; go 1.10
 github.com/shopspring/decimal

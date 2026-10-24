@@ -3,26 +3,33 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"log"
+	"os"
+	"time"
+
 	"visa_assignment/config"
 	"visa_assignment/controller"
 	"visa_assignment/repository"
 	"visa_assignment/router"
 	"visa_assignment/service"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 func main() {
+	initLogger()
+
 	// 1. Load configuration from resources/application.yml
 	err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		log.Fatal().Err(err).Msg("Failed to load config")
 	}
 
 	// 2. Connect to MS SQL Server
 	db := initDatabase()
 	defer func() {
 		if err := db.Close(); err != nil {
-			log.Printf("Error closing database connection: %v", err)
+			log.Error().Err(err).Msg("Error closing database connection")
 		}
 	}()
 
@@ -52,18 +59,33 @@ func startRouter(memberController *controller.MemberController, rewardController
 
 	// 8. Start HTTP Server
 	addr := fmt.Sprintf(":%d", port)
-	log.Printf("Starting Service on %s", addr)
+	log.Info().Str("address", addr).Msg("Starting service")
 	if err := r.Run(addr); err != nil {
-		log.Fatalf("Server failed to start: %v", err)
+		log.Fatal().Err(err).Msg("Server failed to start")
 	}
 }
 
 func initDatabase() *sql.DB {
 	db, err := repository.InitDB(config.GetConfig().Database)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Fatal().Err(err).Msg("Failed to connect to database")
 	}
 
-	log.Println("Successfully connected to SQL Server")
+	log.Info().Msg("Successfully connected to SQL Server")
 	return db
+}
+
+func initLogger() {
+	// Standardize on RFC3339 / UTC timestamps for ledger auditing
+	zerolog.TimeFieldFormat = time.RFC3339
+
+	// Set global log level (InfoLevel for prod, DebugLevel for local debugging)
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+
+	// Configure global logger with timestamp and file:line caller info
+	log.Logger = zerolog.New(os.Stdout).
+		With().
+		Timestamp().
+		Caller().
+		Logger()
 }

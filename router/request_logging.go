@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -28,16 +29,17 @@ func RequestLogging() gin.HandlerFunc {
 
 		startedAt := time.Now()
 		method, path := c.Request.Method, c.Request.URL.Path
-		utils.LogRequest(c.Request.Context(), "request started method=%q path=%q", method, path)
+		zerolog.Ctx(c.Request.Context()).Info().
+			Str("method", method).
+			Str("path", path).
+			Msg("Request started")
 		defer func() {
-			utils.LogRequest(
-				c.Request.Context(),
-				"request completed method=%q path=%q status=%d duration=%s",
-				method,
-				path,
-				c.Writer.Status(),
-				time.Since(startedAt),
-			)
+			zerolog.Ctx(c.Request.Context()).Info().
+				Str("method", method).
+				Str("path", path).
+				Int("status", c.Writer.Status()).
+				Dur("duration", time.Since(startedAt)).
+				Msg("Request completed")
 		}()
 		c.Next()
 	}

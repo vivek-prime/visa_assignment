@@ -34,8 +34,8 @@ func (r *rewardRepository) Create(ctx context.Context, reward *model.RewardEntit
 
 func (r *rewardRepository) createReward(ctx context.Context, reward *model.RewardEntity) error {
 	query := `
-		INSERT INTO vivek_db.dbo.rewards (Member_ID, PointType_ID, Points, Description, EventDate)
-		OUTPUT INSERTED.Reward_ID
+		INSERT INTO vivek_db.dbo.rewards (member_id, point_type_id, points, description, event_date)
+		OUTPUT INSERTED.reward_id
 		VALUES (@p1, @p2, @p3, @p4, @p5)
 	`
 
@@ -99,7 +99,7 @@ func (r *rewardRepository) createRedemption(ctx context.Context, reward *model.R
 	}
 
 	insertQuery := `
-		INSERT INTO rewards (member_id, point_type_id, points, description, event_date)
+		INSERT INTO vivek_db.dbo.rewards (member_id, point_type_id, points, description, event_date)
 		OUTPUT INSERTED.reward_id
 		VALUES (@p1, @p2, @p3, @p4, @p5)
 	`
@@ -125,10 +125,10 @@ func (r *rewardRepository) createRedemption(ctx context.Context, reward *model.R
 
 func (r *rewardRepository) GetRewardsByMemberID(ctx context.Context, memberID int64) ([]model.RewardEntity, error) {
 	query := `
-		SELECT Reward_ID, Member_ID, PointType_ID, Points, Description, EventDate
+		SELECT reward_id, member_id, point_type_id, points, description, event_date
 		FROM vivek_db.dbo.rewards
-		WHERE Member_ID = @p1
-		ORDER BY EventDate ASC, Reward_ID ASC
+		WHERE member_id = @p1
+		ORDER BY event_date ASC, reward_id ASC
 	`
 
 	rows, err := r.db.QueryContext(ctx, query, memberID)
@@ -165,9 +165,9 @@ func (r *rewardRepository) GetRewardsByMemberID(ctx context.Context, memberID in
 
 func (r *rewardRepository) GetMemberBalance(ctx context.Context, memberID int64) (int64, error) {
 	query := `
-		SELECT COALESCE(SUM(Points), 0)
+		SELECT COALESCE(SUM(points), 0)
 		FROM vivek_db.dbo.rewards
-		WHERE Member_ID = @p1
+		WHERE member_id = @p1
 	`
 
 	var balance int64
