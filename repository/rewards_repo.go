@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	model "visa_assignment/models/entity"
+	"visa_assignment/utils"
 )
 
 type RewardRepository interface {

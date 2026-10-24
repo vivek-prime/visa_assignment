@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"rewards-ledger/utils"
 
 	model "visa_assignment/models/entity"
+	"visa_assignment/utils"
 )
 
 type MemberRepository interface {
