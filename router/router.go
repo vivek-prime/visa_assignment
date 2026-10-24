@@ -11,7 +11,9 @@ func SetupRouter(
 	memberController *controller.MemberController,
 	rewardController *controller.RewardController,
 ) *gin.Engine {
-	r := gin.Default()
+	r := gin.New()
+	r.Use(RequestLogging(), gin.Recovery())
+	registerSwaggerRoutes(r)
 
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {

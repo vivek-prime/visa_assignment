@@ -1,0 +1,17 @@
+# Go build and test outputs
+*.exe
+*.out
+coverage.txt
+coverage.*
+__debug_bin*
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Editor and operating system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

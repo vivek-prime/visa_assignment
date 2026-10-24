@@ -93,7 +93,8 @@ func (r *rewardRepository) createRedemption(ctx context.Context, reward *model.R
 		return err
 	}
 
-	if currentBalance < reward.Points {
+	redemptionAmount := -reward.Points
+	if currentBalance < redemptionAmount {
 		return utils.ErrInsufficientBalance
 	}
 

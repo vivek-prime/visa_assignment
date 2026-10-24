@@ -46,6 +46,8 @@ func HandleServiceError(c *gin.Context, err error) {
 		RespondWithError(c, http.StatusConflict, err.Error())
 	case errors.Is(err, ErrMemberNotFound):
 		RespondWithError(c, http.StatusNotFound, err.Error())
+	case errors.Is(err, ErrConcurrentRedemption):
+		RespondWithError(c, http.StatusConflict, err.Error())
 	case errors.Is(err, ErrInsufficientBalance):
 		RespondWithError(c, http.StatusUnprocessableEntity, err.Error())
 	case errors.Is(err, ErrInvalidPointType),
