@@ -5,14 +5,15 @@ import (
 	"strings"
 	"time"
 
-	"rewards-ledger/model"
-	"rewards-ledger/repository"
-	"rewards-ledger/utils"
+	dto "visa_assignment/models/dto"
+	entity "visa_assignment/models/entity"
+	"visa_assignment/repository"
+	"visa_assignment/utils"
 )
 
 type RewardService interface {
-	CreateReward(ctx context.Context, req model.CreateRewardRequest) (*model.Reward, error)
-	GetRewardsByMemberID(ctx context.Context, memberID int64) ([]model.Reward, error)
+	CreateReward(ctx context.Context, req dto.RewardRequest) (*entity.RewardEntity, error)
+	GetRewardsByMemberID(ctx context.Context, memberID int64) ([]entity.RewardEntity, error)
 }
 
 type rewardService struct {
@@ -27,9 +28,9 @@ func NewRewardService(memberRepo repository.MemberRepository, rewardRepo reposit
 	}
 }
 
-func (s *rewardService) CreateReward(ctx context.Context, req model.CreateRewardRequest) (*model.Reward, error) {
+func (s *rewardService) CreateReward(ctx context.Context, req dto.RewardRequest) (*entity.RewardEntity, error) {
 	// Rule: point_type_id must be a valid type (1-4)
-	if !model.IsValidPointType(req.PointTypeID) {
+	if !entity.IsValidPointType(req.PointTypeID) {
 		return nil, utils.ErrInvalidPointType
 	}
 
@@ -52,11 +53,11 @@ func (s *rewardService) CreateReward(ctx context.Context, req model.CreateReward
 	// Rule: The system applies the sign based on point_type_id
 	// Credits (1, 2, 3) are positive; Redemption (4) is negative
 	signedPoints := req.Points
-	if model.IsRedemption(req.PointTypeID) {
+	if entity.IsRedemption(req.PointTypeID) {
 		signedPoints = -req.Points
 	}
 
-	reward := &model.Reward{
+	reward := &entity.RewardEntity{
 		MemberID:    req.MemberID,
 		PointTypeID: req.PointTypeID,
 		Points:      signedPoints,
@@ -66,7 +67,7 @@ func (s *rewardService) CreateReward(ctx context.Context, req model.CreateReward
 
 	// For redemptions, CreateReward in the repository layer checks the member's balance
 	// transactionally to ensure a redemption never exceeds available balance.
-	if model.IsRedemption(req.PointTypeID) {
+	if entity.IsRedemption(req.PointTypeID) {
 		if err := s.rewardRepo.CreateRedemption(ctx, reward, req.Points); err != nil {
 			return nil, err
 		}
@@ -80,7 +81,7 @@ func (s *rewardService) CreateReward(ctx context.Context, req model.CreateReward
 	return reward, nil
 }
 
-func (s *rewardService) GetRewardsByMemberID(ctx context.Context, memberID int64) ([]model.Reward, error) {
+func (s *rewardService) GetRewardsByMemberID(ctx context.Context, memberID int64) ([]entity.RewardEntity, error) {
 	// Verify member exists first so invalid memberId returns 404 Not Found
 	_, err := s.memberRepo.GetByID(ctx, memberID)
 	if err != nil {
@@ -94,7 +95,7 @@ func (s *rewardService) GetRewardsByMemberID(ctx context.Context, memberID int64
 
 	// Return an empty JSON array [] instead of null if the member has no reward entries yet
 	if rewards == nil {
-		return []model.Reward{}, nil
+		return []entity.RewardEntity{}, nil
 	}
 
 	return rewards, nil

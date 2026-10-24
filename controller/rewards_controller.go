@@ -3,9 +3,9 @@ package controller
 import (
 	"net/http"
 
-	"rewards-ledger/model"
-	"rewards-ledger/service"
-	"rewards-ledger/utils"
+	dto "visa_assignment/models/dto"
+	"visa_assignment/service"
+	"visa_assignment/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,7 +22,7 @@ func NewRewardController(rewardService service.RewardService) *RewardController 
 
 // CreateReward handles POST /rewards
 func (rc *RewardController) CreateReward(c *gin.Context) {
-	var req model.CreateRewardRequest
+	var req dto.RewardRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.RespondWithError(c, http.StatusBadRequest, "invalid request payload: "+err.Error())
 		return

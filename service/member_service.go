@@ -5,14 +5,15 @@ import (
 	"strings"
 	"time"
 
-	"rewards-ledger/model"
-	"rewards-ledger/repository"
-	"rewards-ledger/utils"
+	dto "visa_assignment/models/dto"
+	entity "visa_assignment/models/entity"
+	"visa_assignment/repository"
+	"visa_assignment/utils"
 )
 
 type MemberService interface {
-	CreateMember(ctx context.Context, req model.CreateMemberRequest) (*model.Member, error)
-	GetMemberWithBalance(ctx context.Context, memberID int64) (*model.MemberBalanceResponse, error)
+	CreateMember(ctx context.Context, req dto.MemberRequest) (*entity.MemberEntity, error)
+	GetMemberWithBalance(ctx context.Context, memberID int64) (*dto.MemberBalanceResponse, error)
 }
 
 type memberService struct {
@@ -27,7 +28,7 @@ func NewMemberService(memberRepo repository.MemberRepository, rewardRepo reposit
 	}
 }
 
-func (s *memberService) CreateMember(ctx context.Context, req model.CreateMemberRequest) (*model.Member, error) {
+func (s *memberService) CreateMember(ctx context.Context, req dto.MemberRequest) (*entity.MemberEntity, error) {
 	name := strings.TrimSpace(req.Name)
 	email := strings.ToLower(strings.TrimSpace(req.Email))
 
@@ -44,7 +45,7 @@ func (s *memberService) CreateMember(ctx context.Context, req model.CreateMember
 		return nil, utils.ErrDuplicateEmail
 	}
 
-	member := &model.Member{
+	member := &entity.MemberEntity{
 		Name:      name,
 		Email:     email,
 		CreatedAt: time.Now().UTC(),
@@ -57,7 +58,7 @@ func (s *memberService) CreateMember(ctx context.Context, req model.CreateMember
 	return member, nil
 }
 
-func (s *memberService) GetMemberWithBalance(ctx context.Context, memberID int64) (*model.MemberBalanceResponse, error) {
+func (s *memberService) GetMemberWithBalance(ctx context.Context, memberID int64) (*dto.MemberBalanceResponse, error) {
 	member, err := s.memberRepo.GetByID(ctx, memberID)
 	if err != nil {
 		return nil, err
@@ -69,7 +70,7 @@ func (s *memberService) GetMemberWithBalance(ctx context.Context, memberID int64
 		return nil, err
 	}
 
-	return &model.MemberBalanceResponse{
+	return &dto.MemberBalanceResponse{
 		MemberID:      member.MemberID,
 		Name:          member.Name,
 		Email:         member.Email,

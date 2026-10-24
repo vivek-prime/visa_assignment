@@ -3,8 +3,11 @@ package controller
 import (
 	"log"
 	"net/http"
-	"rewards-ledger/utils"
 	"strconv"
+
+	dto "visa_assignment/models/dto"
+	"visa_assignment/service"
+	"visa_assignment/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,7 +26,7 @@ func NewMemberController(memberService service.MemberService, rewardService serv
 
 // CreateMember handles POST /members
 func (mc *MemberController) CreateMember(ctx *gin.Context) {
-	var req model.CreateMemberRequest
+	var req dto.MemberRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		log.Printf("Failed to bind JSON: %v", err)
 
@@ -33,11 +36,11 @@ func (mc *MemberController) CreateMember(ctx *gin.Context) {
 
 	member, err := mc.memberService.CreateMember(ctx.Request.Context(), req)
 	if err != nil {
-		utils.HandleServiceError(c, err)
+		utils.HandleServiceError(ctx, err)
 		return
 	}
 
-	ctx.PureJson(http.StatusCreated, member)
+	ctx.JSON(http.StatusCreated, member)
 }
 
 // GetMember handles GET /members/:memberId
