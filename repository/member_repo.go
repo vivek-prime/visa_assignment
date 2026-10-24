@@ -24,7 +24,7 @@ func NewMemberRepository(db *sql.DB) MemberRepository {
 
 func (r *memberRepository) Create(ctx context.Context, member *model.MemberEntity) error {
 	query := `
-		INSERT INTO members (name, email, created_at)
+		INSERT INTO vivek_db.dbo.members (name, email, created_at)
 		OUTPUT INSERTED.member_id
 		VALUES (@p1, @p2, @p3)
 	`
@@ -47,7 +47,7 @@ func (r *memberRepository) Create(ctx context.Context, member *model.MemberEntit
 func (r *memberRepository) GetByID(ctx context.Context, memberID int64) (*model.MemberEntity, error) {
 	query := `
 		SELECT member_id, name, email, created_at
-		FROM members
+		FROM vivek_db.dbo.members
 		WHERE Member_ID = @p1
 	`
 

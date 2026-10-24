@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"log"
 	"net/http"
 	"strconv"
 
@@ -28,20 +27,21 @@ func NewMemberController(memberService service.MemberService, rewardService serv
 func (mc *MemberController) CreateMember(ctx *gin.Context) {
 	var req dto.MemberRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		log.Printf("Failed to bind JSON: %v", err)
+		utils.LogRequest(ctx.Request.Context(), "create_member rejected invalid_payload error=%q", err)
 
 		utils.RespondWithError(ctx, http.StatusBadRequest, "invalid request payload: "+err.Error())
 		return
 	}
 
-	log.Printf("CreateMember request received: %+v", req)
+	utils.LogRequest(ctx.Request.Context(), "create_member accepted")
 	member, err := mc.memberService.CreateMember(ctx.Request.Context(), req)
 	if err != nil {
-		log.Printf("Failed to create member: %v", err)
+		utils.LogRequest(ctx.Request.Context(), "create_member failed error=%q", err)
 		utils.HandleServiceError(ctx, err)
 		return
 	}
 
+	utils.LogRequest(ctx.Request.Context(), "create_member response member_id=%d", member.MemberID)
 	ctx.JSON(http.StatusCreated, member)
 }
 
@@ -49,17 +49,20 @@ func (mc *MemberController) CreateMember(ctx *gin.Context) {
 func (mc *MemberController) GetMember(c *gin.Context) {
 	memberID, err := strconv.ParseInt(c.Param("memberId"), 10, 64)
 	if err != nil || memberID <= 0 {
+		utils.LogRequest(c.Request.Context(), "get_member rejected invalid_member_id value=%q", c.Param("memberId"))
 		utils.RespondWithError(c, http.StatusBadRequest, "invalid member_id parameter")
 		return
 	}
 
+	utils.LogRequest(c.Request.Context(), "get_member member_id=%d", memberID)
 	member, err := mc.memberService.GetMemberWithBalance(c.Request.Context(), memberID)
 	if err != nil {
-		log.Printf("Failed to get member details: %v", err)
+		utils.LogRequest(c.Request.Context(), "get_member failed member_id=%d error=%q", memberID, err)
 		utils.HandleServiceError(c, err)
 		return
 	}
 
+	utils.LogRequest(c.Request.Context(), "get_member response : %+v", member)
 	c.JSON(http.StatusOK, member)
 }
 
@@ -67,16 +70,19 @@ func (mc *MemberController) GetMember(c *gin.Context) {
 func (mc *MemberController) GetMemberRewards(c *gin.Context) {
 	memberID, err := strconv.ParseInt(c.Param("memberId"), 10, 64)
 	if err != nil || memberID <= 0 {
+		utils.LogRequest(c.Request.Context(), "get_member_rewards rejected invalid_member_id value=%q", c.Param("memberId"))
 		utils.RespondWithError(c, http.StatusBadRequest, "invalid member_id parameter")
 		return
 	}
 
+	utils.LogRequest(c.Request.Context(), "get_member_rewards , member_id=%d", memberID)
 	rewards, err := mc.rewardService.GetRewardsByMemberID(c.Request.Context(), memberID)
 	if err != nil {
-		log.Printf("Failed to get member rewards: %v", err)
+		utils.LogRequest(c.Request.Context(), "get_member_rewards failed member_id=%d error=%q", memberID, err)
 		utils.HandleServiceError(c, err)
 		return
 	}
 
+	utils.LogRequest(c.Request.Context(), "get_member_rewards response : %+v", rewards)
 	c.JSON(http.StatusOK, rewards)
 }

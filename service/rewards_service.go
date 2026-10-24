@@ -30,6 +30,7 @@ func NewRewardService(memberRepo repository.MemberRepository, rewardRepo reposit
 
 func (s *rewardService) CreateReward(ctx context.Context, req dto.RewardRequest) (*entity.RewardEntity, error) {
 	if err := validateRewardRequest(&req); err != nil {
+		utils.LogRequest(ctx, "reward_service create validation_failed error=%q", err)
 		return nil, err
 	}
 

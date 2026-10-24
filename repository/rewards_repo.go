@@ -34,7 +34,7 @@ func (r *rewardRepository) Create(ctx context.Context, reward *model.RewardEntit
 
 func (r *rewardRepository) createReward(ctx context.Context, reward *model.RewardEntity) error {
 	query := `
-		INSERT INTO rewards (Member_ID, PointType_ID, Points, Description, EventDate)
+		INSERT INTO vivek_db.dbo.rewards (Member_ID, PointType_ID, Points, Description, EventDate)
 		OUTPUT INSERTED.Reward_ID
 		VALUES (@p1, @p2, @p3, @p4, @p5)
 	`
@@ -66,7 +66,7 @@ func (r *rewardRepository) createRedemption(ctx context.Context, reward *model.R
 	// NOWAIT: Fail immediately with SQL Error 1222 if another redemption is already locking this member
 	lockMemberQuery := `
 		SELECT member_id
-		FROM members WITH (ROWLOCK, UPDLOCK, NOWAIT)
+		FROM vivek_db.dbo.members WITH (ROWLOCK, UPDLOCK, NOWAIT)
 		WHERE member_id = @p1
 	`
 	var lockedMemberID int64
@@ -85,7 +85,7 @@ func (r *rewardRepository) createRedemption(ctx context.Context, reward *model.R
 	// Calculate current available balance inside the transaction
 	balanceQuery := `
 		SELECT COALESCE(SUM(points), 0)
-		FROM rewards
+		FROM vivek_db.dbo.rewards
 		WHERE member_id = @p1
 	`
 	var currentBalance int64
@@ -116,13 +116,17 @@ func (r *rewardRepository) createRedemption(ctx context.Context, reward *model.R
 		return err
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *rewardRepository) GetRewardsByMemberID(ctx context.Context, memberID int64) ([]model.RewardEntity, error) {
 	query := `
 		SELECT Reward_ID, Member_ID, PointType_ID, Points, Description, EventDate
-		FROM rewards
+		FROM vivek_db.dbo.rewards
 		WHERE Member_ID = @p1
 		ORDER BY EventDate ASC, Reward_ID ASC
 	`
@@ -162,7 +166,7 @@ func (r *rewardRepository) GetRewardsByMemberID(ctx context.Context, memberID in
 func (r *rewardRepository) GetMemberBalance(ctx context.Context, memberID int64) (int64, error) {
 	query := `
 		SELECT COALESCE(SUM(Points), 0)
-		FROM rewards
+		FROM vivek_db.dbo.rewards
 		WHERE Member_ID = @p1
 	`
 

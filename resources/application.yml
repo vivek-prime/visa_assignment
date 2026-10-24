@@ -1,3 +1,3 @@
 database:
-connection_string: "server=localhost;port=1433;database=vivek_db;trusted_connection=yes;encrypt=disable;trustservercertificate=true"
-port: 8080
+  connection_string: "server=localhost;port=1433;database=vivek_db;trusted_connection=yes;encrypt=disable;trustservercertificate=true"
+  port: 8080
