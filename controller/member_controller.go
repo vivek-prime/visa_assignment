@@ -34,8 +34,10 @@ func (mc *MemberController) CreateMember(ctx *gin.Context) {
 		return
 	}
 
+	log.Printf("CreateMember request received: %+v", req)
 	member, err := mc.memberService.CreateMember(ctx.Request.Context(), req)
 	if err != nil {
+		log.Printf("Failed to create member: %v", err)
 		utils.HandleServiceError(ctx, err)
 		return
 	}
@@ -53,6 +55,7 @@ func (mc *MemberController) GetMember(c *gin.Context) {
 
 	member, err := mc.memberService.GetMemberWithBalance(c.Request.Context(), memberID)
 	if err != nil {
+		log.Printf("Failed to get member details: %v", err)
 		utils.HandleServiceError(c, err)
 		return
 	}
@@ -70,6 +73,7 @@ func (mc *MemberController) GetMemberRewards(c *gin.Context) {
 
 	rewards, err := mc.rewardService.GetRewardsByMemberID(c.Request.Context(), memberID)
 	if err != nil {
+		log.Printf("Failed to get member rewards: %v", err)
 		utils.HandleServiceError(c, err)
 		return
 	}

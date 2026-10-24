@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"log"
 	"net/http"
 
 	dto "visa_assignment/models/dto"
@@ -30,6 +31,7 @@ func (rc *RewardController) CreateReward(c *gin.Context) {
 
 	reward, err := rc.rewardService.CreateReward(c.Request.Context(), req)
 	if err != nil {
+		log.Printf("Failed to create reward: %v", err)
 		utils.HandleServiceError(c, err)
 		return
 	}

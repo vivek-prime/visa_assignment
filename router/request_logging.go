@@ -5,12 +5,14 @@ import (
 	"log"
 	"time"
 
+	"visa_assignment/utils"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 const (
-	RequestIDKey    = "request_id"
+	RequestIDKey    = utils.RequestIDKey
 	RequestIDHeader = "X-Request-ID"
 )
 
@@ -30,10 +32,11 @@ func RequestLogging() gin.HandlerFunc {
 
 		startedAt := time.Now()
 		method, path := c.Request.Method, c.Request.URL.Path
-		log.Printf("request started request_id=%s method=%q path=%q", requestID, method, path)
+		log.Printf("request started %s=%s method=%q path=%q", RequestIDKey, requestID, method, path)
 		defer func() {
 			log.Printf(
-				"request completed request_id=%s method=%q path=%q status=%d duration=%s",
+				"request completed %s=%s method=%q path=%q status=%d duration=%s",
+				RequestIDKey,
 				requestID,
 				method,
 				path,
