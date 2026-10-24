@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 	"time"
-
+	"visa_assignment/constants"
 	dto "visa_assignment/models/dto"
 	entity "visa_assignment/models/entity"
 	"visa_assignment/repository"
@@ -29,31 +29,20 @@ func NewRewardService(memberRepo repository.MemberRepository, rewardRepo reposit
 }
 
 func (s *rewardService) CreateReward(ctx context.Context, req dto.RewardRequest) (*entity.RewardEntity, error) {
-	// Rule: point_type_id must be a valid type (1-4)
-	if !entity.IsValidPointType(req.PointTypeID) {
-		return nil, utils.ErrInvalidPointType
+	if err := validateRewardRequest(&req); err != nil {
+		return nil, err
 	}
 
-	// Rule: points must be a positive number
-	if req.Points <= 0 {
-		return nil, utils.ErrInvalidPoints
-	}
-
-	description := strings.TrimSpace(req.Description)
-	if description == "" {
-		return nil, utils.ErrInvalidInput
-	}
-
-	// Rule: member_id must reference an existing member
+	// member_id must reference an existing member
 	_, err := s.memberRepo.GetByID(ctx, req.MemberID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Rule: The system applies the sign based on point_type_id
+	//The system applies the sign based on point_type_id
 	// Credits (1, 2, 3) are positive; Redemption (4) is negative
 	signedPoints := req.Points
-	if entity.IsRedemption(req.PointTypeID) {
+	if isRedemption(req.PointTypeID) {
 		signedPoints = -req.Points
 	}
 
@@ -61,20 +50,20 @@ func (s *rewardService) CreateReward(ctx context.Context, req dto.RewardRequest)
 		MemberID:    req.MemberID,
 		PointTypeID: req.PointTypeID,
 		Points:      signedPoints,
-		Description: description,
+		Description: req.Description,
 		EventDate:   time.Now().UTC(),
 	}
 
-	// For redemptions, CreateReward in the repository layer checks the member's balance
-	// transactionally to ensure a redemption never exceeds available balance.
-	if entity.IsRedemption(req.PointTypeID) {
-		if err := s.rewardRepo.CreateRedemption(ctx, reward, req.Points); err != nil {
+	// For redemptions (point_type_id == 4), CreateRedemption locks the member row,
+	// verifies member existence, checks available balance, and inserts atomically.
+	if isRedemption(req.PointTypeID) {
+		if err := s.rewardRepo.Create(ctx, reward, true); err != nil {
 			return nil, err
 		}
 		return reward, nil
 	}
 
-	if err := s.rewardRepo.Create(ctx, reward); err != nil {
+	if err := s.rewardRepo.Create(ctx, reward, false); err != nil {
 		return nil, err
 	}
 
@@ -88,7 +77,7 @@ func (s *rewardService) GetRewardsByMemberID(ctx context.Context, memberID int64
 		return nil, err
 	}
 
-	rewards, err := s.rewardRepo.GetByMemberID(ctx, memberID)
+	rewards, err := s.rewardRepo.GetRewardsByMemberID(ctx, memberID)
 	if err != nil {
 		return nil, err
 	}
@@ -99,4 +88,21 @@ func (s *rewardService) GetRewardsByMemberID(ctx context.Context, memberID int64
 	}
 
 	return rewards, nil
+}
+
+func validateRewardRequest(req *dto.RewardRequest) error {
+	if !isValidPointType(req.PointTypeID) {
+		return utils.ErrInvalidPointType
+	}
+
+	if req.Points <= 0 {
+		return utils.ErrInvalidPoints
+	}
+
+	req.Description = strings.TrimSpace(req.Description)
+	if req.Description == constants.Empty {
+		return utils.ErrInvalidInput
+	}
+
+	return nil
 }

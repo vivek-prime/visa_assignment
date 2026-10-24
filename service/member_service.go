@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 	"strings"
-	"time"
 
+	"visa_assignment/constants"
 	dto "visa_assignment/models/dto"
 	entity "visa_assignment/models/entity"
 	"visa_assignment/repository"
@@ -32,23 +32,14 @@ func (s *memberService) CreateMember(ctx context.Context, req dto.MemberRequest)
 	name := strings.TrimSpace(req.Name)
 	email := strings.ToLower(strings.TrimSpace(req.Email))
 
-	if name == "" || email == "" {
+	if name == constants.Empty || email == constants.Empty {
 		return nil, utils.ErrInvalidInput
-	}
-
-	// Rule: A member cannot be created with a duplicate email
-	exists, err := s.memberRepo.ExistsByEmail(ctx, email)
-	if err != nil {
-		return nil, err
-	}
-	if exists {
-		return nil, utils.ErrDuplicateEmail
 	}
 
 	member := &entity.MemberEntity{
 		Name:      name,
 		Email:     email,
-		CreatedAt: time.Now().UTC(),
+		CreatedAt: utils.GetCurrentTime(),
 	}
 
 	if err := s.memberRepo.Create(ctx, member); err != nil {
@@ -64,7 +55,7 @@ func (s *memberService) GetMemberWithBalance(ctx context.Context, memberID int64
 		return nil, err
 	}
 
-	// Rule: A member's available balance is the sum of all their reward entries
+	// A member's available balance is the sum of all their reward entries
 	balance, err := s.rewardRepo.GetMemberBalance(ctx, memberID)
 	if err != nil {
 		return nil, err

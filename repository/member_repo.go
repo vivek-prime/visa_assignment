@@ -12,7 +12,6 @@ import (
 type MemberRepository interface {
 	Create(ctx context.Context, member *model.MemberEntity) error
 	GetByID(ctx context.Context, memberID int64) (*model.MemberEntity, error)
-	ExistsByEmail(ctx context.Context, email string) (bool, error)
 }
 
 type memberRepository struct {
@@ -25,9 +24,9 @@ func NewMemberRepository(db *sql.DB) MemberRepository {
 
 func (r *memberRepository) Create(ctx context.Context, member *model.MemberEntity) error {
 	query := `
-		INSERT INTO Members (name, email, created_at, updated_at)
+		INSERT INTO members (name, email, created_at)
 		OUTPUT INSERTED.member_id
-		VALUES (@p1, @p2, @p3, @p4)
+		VALUES (@p1, @p2, @p3)
 	`
 
 	err := r.db.QueryRowContext(
@@ -36,7 +35,6 @@ func (r *memberRepository) Create(ctx context.Context, member *model.MemberEntit
 		member.Name,
 		member.Email,
 		member.CreatedAt,
-		member.UpdatedAt,
 	).Scan(&member.MemberID)
 
 	if err != nil {
@@ -48,8 +46,8 @@ func (r *memberRepository) Create(ctx context.Context, member *model.MemberEntit
 
 func (r *memberRepository) GetByID(ctx context.Context, memberID int64) (*model.MemberEntity, error) {
 	query := `
-		SELECT member_id, name, email, created_at, updated_at
-		FROM Members
+		SELECT member_id, name, email, created_at
+		FROM members
 		WHERE Member_ID = @p1
 	`
 
@@ -59,7 +57,6 @@ func (r *memberRepository) GetByID(ctx context.Context, memberID int64) (*model.
 		&m.Name,
 		&m.Email,
 		&m.CreatedAt,
-		&m.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -69,19 +66,4 @@ func (r *memberRepository) GetByID(ctx context.Context, memberID int64) (*model.
 	}
 
 	return &m, nil
-}
-
-func (r *memberRepository) ExistsByEmail(ctx context.Context, email string) (bool, error) {
-	query := `
-		SELECT COUNT(1)
-		FROM Members
-		WHERE Email = @p1
-	`
-
-	var count int
-	if err := r.db.QueryRowContext(ctx, query, email).Scan(&count); err != nil {
-		return false, err
-	}
-
-	return count > 0, nil
 }

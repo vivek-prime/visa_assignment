@@ -14,6 +14,8 @@ var (
 	// ErrMemberNotFound is returned when member_id does not reference an existing member
 	ErrMemberNotFound = errors.New("member not found")
 
+	ErrConcurrentRedemption = errors.New("another transaction is currently in progress for this member, please retry")
+
 	// ErrInvalidPointType is returned when point_type_id is not between 1 and 4[cite: 4]
 	ErrInvalidPointType = errors.New("invalid point_type_id: must be between 1 and 4")
 

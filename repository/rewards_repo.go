@@ -4,15 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	utils "visa_assignment/utils"
 
 	model "visa_assignment/models/entity"
-	"visa_assignment/utils"
+
+	mssql "github.com/microsoft/go-mssqldb"
 )
 
 type RewardRepository interface {
-	Create(ctx context.Context, reward *model.RewardEntity) error
-	CreateRedemption(ctx context.Context, reward *model.RewardEntity, redemptionAmount int64) error
-	GetByMemberID(ctx context.Context, memberID int64) ([]model.RewardEntity, error)
+	Create(ctx context.Context, reward *model.RewardEntity, isRedemption bool) error
+	GetRewardsByMemberID(ctx context.Context, memberID int64) ([]model.RewardEntity, error)
 	GetMemberBalance(ctx context.Context, memberID int64) (int64, error)
 }
 
@@ -24,9 +25,16 @@ func NewRewardRepository(db *sql.DB) RewardRepository {
 	return &rewardRepository{db: db}
 }
 
-func (r *rewardRepository) Create(ctx context.Context, reward *model.RewardEntity) error {
+func (r *rewardRepository) Create(ctx context.Context, reward *model.RewardEntity, isRedemption bool) error {
+	if !isRedemption {
+		return r.createReward(ctx, reward)
+	}
+	return r.createRedemption(ctx, reward)
+}
+
+func (r *rewardRepository) createReward(ctx context.Context, reward *model.RewardEntity) error {
 	query := `
-		INSERT INTO Rewards (Member_ID, PointType_ID, Points, Description, EventDate)
+		INSERT INTO rewards (Member_ID, PointType_ID, Points, Description, EventDate)
 		OUTPUT INSERTED.Reward_ID
 		VALUES (@p1, @p2, @p3, @p4, @p5)
 	`
@@ -42,9 +50,10 @@ func (r *rewardRepository) Create(ctx context.Context, reward *model.RewardEntit
 	).Scan(&reward.RewardID)
 }
 
-// CreateRedemption checks available balance and inserts the negative reward entry atomically
-func (r *rewardRepository) CreateRedemption(ctx context.Context, reward *model.RewardEntity, redemptionAmount int64) error {
-	tx, err := r.db.BeginTx(ctx, nil)
+func (r *rewardRepository) createRedemption(ctx context.Context, reward *model.RewardEntity) error {
+	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{
+		Isolation: sql.LevelReadCommitted,
+	})
 	if err != nil {
 		return err
 	}
@@ -52,39 +61,45 @@ func (r *rewardRepository) CreateRedemption(ctx context.Context, reward *model.R
 		_ = tx.Rollback()
 	}()
 
-	// Lock the member row for this transaction so concurrent redemptions serialize cleanly
+	// ROWLOCK: Lock only this specific member row
+	// UPDLOCK: Hold update lock until transaction completes
+	// NOWAIT: Fail immediately with SQL Error 1222 if another redemption is already locking this member
 	lockMemberQuery := `
-		SELECT Member_ID
-		FROM Members WITH (UPDLOCK, HOLDLOCK)
-		WHERE Member_ID = @p1
+		SELECT member_id
+		FROM members WITH (ROWLOCK, UPDLOCK, NOWAIT)
+		WHERE member_id = @p1
 	`
 	var lockedMemberID int64
 	if err := tx.QueryRowContext(ctx, lockMemberQuery, reward.MemberID).Scan(&lockedMemberID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return utils.ErrMemberNotFound
 		}
+		// SQL Server Error 1222 = Lock request time out period exceeded (triggered by NOWAIT)
+		var sqlErr mssql.Error
+		if errors.As(err, &sqlErr) && sqlErr.Number == 1222 {
+			return utils.ErrConcurrentRedemption
+		}
 		return err
 	}
 
 	// Calculate current available balance inside the transaction
 	balanceQuery := `
-		SELECT COALESCE(SUM(Points), 0)
-		FROM Rewards
-		WHERE Member_ID = @p1
+		SELECT COALESCE(SUM(points), 0)
+		FROM rewards
+		WHERE member_id = @p1
 	`
 	var currentBalance int64
 	if err := tx.QueryRowContext(ctx, balanceQuery, reward.MemberID).Scan(&currentBalance); err != nil {
 		return err
 	}
 
-	// Rule: A redemption must not exceed the member's available balance
-	if currentBalance < redemptionAmount {
+	if currentBalance < reward.Points {
 		return utils.ErrInsufficientBalance
 	}
 
 	insertQuery := `
-		INSERT INTO Rewards (Member_ID, PointType_ID, Points, Description, EventDate)
-		OUTPUT INSERTED.Reward_ID
+		INSERT INTO rewards (member_id, point_type_id, points, description, event_date)
+		OUTPUT INSERTED.reward_id
 		VALUES (@p1, @p2, @p3, @p4, @p5)
 	`
 	err = tx.QueryRowContext(
@@ -103,16 +118,19 @@ func (r *rewardRepository) CreateRedemption(ctx context.Context, reward *model.R
 	return tx.Commit()
 }
 
-func (r *rewardRepository) GetByMemberID(ctx context.Context, memberID int64) ([]model.RewardEntity, error) {
+func (r *rewardRepository) GetRewardsByMemberID(ctx context.Context, memberID int64) ([]model.RewardEntity, error) {
 	query := `
 		SELECT Reward_ID, Member_ID, PointType_ID, Points, Description, EventDate
-		FROM Rewards
+		FROM rewards
 		WHERE Member_ID = @p1
 		ORDER BY EventDate ASC, Reward_ID ASC
 	`
 
 	rows, err := r.db.QueryContext(ctx, query, memberID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	defer rows.Close()
@@ -143,7 +161,7 @@ func (r *rewardRepository) GetByMemberID(ctx context.Context, memberID int64) ([
 func (r *rewardRepository) GetMemberBalance(ctx context.Context, memberID int64) (int64, error) {
 	query := `
 		SELECT COALESCE(SUM(Points), 0)
-		FROM Rewards
+		FROM rewards
 		WHERE Member_ID = @p1
 	`
 
