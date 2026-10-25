@@ -10,6 +10,39 @@ import (
 	"visa_assignment/utils"
 )
 
+type rewardRepoMock struct {
+	balance int64
+	rewards []entity.RewardEntity
+	err     error
+}
+
+func (m *rewardRepoMock) Create(
+	ctx context.Context,
+	reward *entity.RewardEntity,
+	isRedemption bool,
+) error {
+	if m.err != nil {
+		return m.err
+	}
+
+	reward.RewardID = 1
+	return nil
+}
+
+func (m *rewardRepoMock) GetRewardsByMemberID(
+	ctx context.Context,
+	memberID int64,
+) ([]entity.RewardEntity, error) {
+	return m.rewards, m.err
+}
+
+func (m *rewardRepoMock) GetMemberBalance(
+	ctx context.Context,
+	memberID int64,
+) (int64, error) {
+	return m.balance, m.err
+}
+
 func TestCreateReward_CreditSuccess(t *testing.T) {
 	memberRepo := &memberRepoMock{
 		member: &entity.MemberEntity{
@@ -133,15 +166,14 @@ func TestCreateReward_EmptyDescription(t *testing.T) {
 }
 
 func TestCreateReward_MemberNotFound(t *testing.T) {
-	memberRepo := &memberRepoMock{
+	rewardRepo := &rewardRepoMock{
 		err: utils.ErrMemberNotFound,
 	}
-
-	svc := NewRewardService(memberRepo, &rewardRepoMock{})
+	svc := NewRewardService(&memberRepoMock{}, rewardRepo)
 
 	reward, err := svc.CreateReward(context.Background(), dto.RewardRequest{
 		MemberID:    99,
-		PointTypeID: 1,
+		PointTypeID: 4,
 		Points:      100,
 		Description: "Test reward",
 	})
