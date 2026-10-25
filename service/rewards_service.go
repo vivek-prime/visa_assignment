@@ -41,12 +41,6 @@ func (s *rewardService) CreateReward(ctx context.Context, req dto.RewardRequest)
 		return nil, err
 	}
 
-	// member_id must reference an existing member
-	_, err := s.memberRepo.GetByID(ctx, req.MemberID)
-	if err != nil {
-		return nil, err
-	}
-
 	// applies the sign based on point_type_id
 	// Credits (1, 2, 3) are positive; Redemption (4) is negative
 	signedPoints := req.Points

@@ -7,8 +7,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	sqlServerDuplicateIndexError      int32 = 2601
+	sqlServerDuplicateConstraintError int32 = 2627
+	sqlServerConstraintViolationError int32 = 547
+	sqlServerLockTimeoutError         int32 = 1222
+)
+
 var (
 	ErrMemberNotFound       = errors.New("member not found")
+	ErrDuplicateRecord      = errors.New("duplicate record found")
 	ErrConcurrentRedemption = errors.New("another transaction is currently in progress for this member, please retry")
 	ErrInvalidPointType     = errors.New("invalid point_type_id: must be between 1 and 4")
 	ErrInvalidPoints        = errors.New("points must be a positive number greater than zero")
@@ -28,6 +36,21 @@ func RespondWithError(c *gin.Context, statusCode int, message string) {
 
 // HandleServiceError maps domain/service errors to appropriate HTTP status codes
 func HandleServiceError(c *gin.Context, err error) {
+	var sqlErr interface{ SQLErrorNumber() int32 }
+	if errors.As(err, &sqlErr) {
+		switch sqlErr.SQLErrorNumber() {
+		case sqlServerDuplicateConstraintError:
+			RespondWithError(c, http.StatusInternalServerError, ErrDuplicateRecord.Error())
+			return
+		case sqlServerLockTimeoutError:
+			RespondWithError(c, http.StatusInternalServerError, ErrConcurrentRedemption.Error())
+			return
+		case sqlServerConstraintViolationError:
+			RespondWithError(c, http.StatusInternalServerError, ErrMemberNotFound.Error())
+			return
+		}
+	}
+
 	switch {
 	case errors.Is(err, ErrMemberNotFound):
 		RespondWithError(c, http.StatusNotFound, err.Error())
@@ -40,6 +63,6 @@ func HandleServiceError(c *gin.Context, err error) {
 		errors.Is(err, ErrInvalidInput):
 		RespondWithError(c, http.StatusBadRequest, err.Error())
 	default:
-		RespondWithError(c, http.StatusInternalServerError, err.Error())
+		RespondWithError(c, http.StatusInternalServerError, "internal server error")
 	}
 }

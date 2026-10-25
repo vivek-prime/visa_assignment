@@ -161,12 +161,12 @@ Common error statuses:
 
 | Status | Meaning |
 | ---: | --- |
-| `400` | Invalid JSON, member ID, point type, points, or other input |
+| `400` | Invalid JSON, member ID, point type, points, other input, or SQL Server constraint violation |
 | `404` | Member does not exist |
-| `409` | Concurrent redemption lock conflict |
+| `409` | Duplicate key or concurrent redemption lock conflict |
 | `500` | Database or other internal error |
 
-The current error handler maps insufficient-balance redemption errors to `500 Internal Server Error`.
+The current error handler maps insufficient-balance redemption errors to `500 Internal Server Error`. Unrecognized SQL Server errors return a generic internal-server-error message so database details are not exposed to API clients.
 
 ## Request logging and correlation
 
