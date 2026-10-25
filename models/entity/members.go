@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// MemberEntity represents a row in the Members table and the response for POST /members
+// MemberEntity represents a row in the members table
 type MemberEntity struct {
 	MemberID  int64     `json:"member_id" db:"member_id"`
 	Name      string    `json:"name" db:"name"`

@@ -1,8 +1,9 @@
 package constants
 
 const (
-	Empty        = ""
-	RequestIDKey = "request_id"
+	Empty           = ""
+	RequestIDKey    = "request_id"
+	RequestIDHeader = "X-Request-ID"
 )
 
 const (

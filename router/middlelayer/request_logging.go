@@ -4,16 +4,12 @@ import (
 	"context"
 	"time"
 
+	"visa_assignment/constants"
 	"visa_assignment/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
-)
-
-const (
-	RequestIDKey    = utils.RequestIDKey
-	RequestIDHeader = "X-Request-ID"
 )
 
 func RequestIDFromContext(ctx context.Context) (string, bool) {
@@ -23,9 +19,9 @@ func RequestIDFromContext(ctx context.Context) (string, bool) {
 func RequestLogging() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		requestID := uuid.NewString()
-		c.Set(RequestIDKey, requestID)
+		c.Set(constants.RequestIDKey, requestID)
 		c.Request = c.Request.WithContext(utils.WithRequestID(c.Request.Context(), requestID))
-		c.Header(RequestIDHeader, requestID)
+		c.Header(constants.RequestIDHeader, requestID)
 
 		startedAt := time.Now()
 		method, path := c.Request.Method, c.Request.URL.Path

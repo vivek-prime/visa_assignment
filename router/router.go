@@ -3,6 +3,7 @@ package router
 import (
 	"net/http"
 	"visa_assignment/controller"
+	router "visa_assignment/router/middlelayer"
 
 	"github.com/gin-gonic/gin"
 )
@@ -12,7 +13,7 @@ func SetupRouter(
 	rewardController *controller.RewardController,
 ) *gin.Engine {
 	r := gin.New()
-	r.Use(RequestLogging(), gin.Recovery())
+	r.Use(router.RequestLogging(), gin.Recovery())
 	registerSwaggerRoutes(r)
 
 	// Health check endpoint

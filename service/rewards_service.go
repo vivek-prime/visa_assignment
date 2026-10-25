@@ -47,7 +47,7 @@ func (s *rewardService) CreateReward(ctx context.Context, req dto.RewardRequest)
 		return nil, err
 	}
 
-	//The system applies the sign based on point_type_id
+	// applies the sign based on point_type_id
 	// Credits (1, 2, 3) are positive; Redemption (4) is negative
 	signedPoints := req.Points
 	if isRedemption(req.PointTypeID) {

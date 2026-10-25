@@ -15,8 +15,8 @@ func InitDB(database config.DatabaseConfig) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to open sqlserver connection: %w", err)
 	}
 
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(10)
+	db.SetMaxOpenConns(10)
+	db.SetMaxIdleConns(3)
 	db.SetConnMaxLifetime(5 * time.Minute)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
