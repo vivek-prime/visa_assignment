@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"strings"
-	"time"
+
 	"visa_assignment/constants"
 	dto "visa_assignment/models/dto"
 	entity "visa_assignment/models/entity"
@@ -53,7 +53,7 @@ func (s *rewardService) CreateReward(ctx context.Context, req dto.RewardRequest)
 		PointTypeID: req.PointTypeID,
 		Points:      signedPoints,
 		Description: req.Description,
-		EventDate:   time.Now().UTC(),
+		EventDate:   utils.GetCurrentTime(),
 	}
 
 	// For redemptions (point_type_id == 4), CreateRedemption locks the member row,
