@@ -98,7 +98,7 @@ paths:
   /v1/rewards:
     post:
       summary: Create a reward transaction
-      description: Point type IDs 1-3 add points; point type ID 4 redeems points. Supply a positive points value for both credits and redemptions; redemption points are stored as a negative value.
+      description: The configured point_type_id determines whether the transaction is a credit or debit. Supply a positive points value; credits are stored as positive points, while debits are stored as negative points and checked against the member balance.
       operationId: createReward
       requestBody:
         required: true
@@ -223,7 +223,7 @@ components:
         points:
           type: integer
           format: int64
-          description: Negative for redemption transactions.
+          description: Negative for debit transactions.
         description:
           type: string
         event_date:

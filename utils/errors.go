@@ -18,7 +18,7 @@ var (
 	ErrMemberNotFound       = errors.New("member not found")
 	ErrDuplicateRecord      = errors.New("duplicate record found")
 	ErrConcurrentRedemption = errors.New("another transaction is currently in progress for this member, please retry")
-	ErrInvalidPointType     = errors.New("invalid point_type_id: must be between 1 and 4")
+	ErrInvalidPointType     = errors.New("invalid point_type_id: no direction is configured")
 	ErrInvalidPoints        = errors.New("points must be a positive number greater than zero")
 	ErrInsufficientBalance  = errors.New("insufficient points balance for this redemption")
 	ErrInvalidInput         = errors.New("invalid input provided")

@@ -5,15 +5,18 @@ import (
 	"errors"
 	"testing"
 
+	"visa_assignment/config"
 	dto "visa_assignment/models/dto"
 	entity "visa_assignment/models/entity"
+	"visa_assignment/repository"
 	"visa_assignment/utils"
 )
 
 type rewardRepoMock struct {
-	balance int64
-	rewards []entity.RewardEntity
-	err     error
+	balance      int64
+	rewards      []entity.RewardEntity
+	err          error
+	isRedemption bool
 }
 
 func (m *rewardRepoMock) Create(
@@ -21,6 +24,7 @@ func (m *rewardRepoMock) Create(
 	reward *entity.RewardEntity,
 	isRedemption bool,
 ) error {
+	m.isRedemption = isRedemption
 	if m.err != nil {
 		return m.err
 	}
@@ -43,6 +47,15 @@ func (m *rewardRepoMock) GetMemberBalance(
 	return m.balance, m.err
 }
 
+func newTestRewardService(memberRepo repository.MemberRepository, rewardRepo repository.RewardRepository) RewardService {
+	return NewRewardService(memberRepo, rewardRepo, map[int]config.PointTypeConfig{
+		1: config.PointTypeCredit,
+		2: config.PointTypeCredit,
+		3: config.PointTypeCredit,
+		4: config.PointTypeDebit,
+	})
+}
+
 func TestCreateReward_CreditSuccess(t *testing.T) {
 	memberRepo := &memberRepoMock{
 		member: &entity.MemberEntity{
@@ -53,7 +66,7 @@ func TestCreateReward_CreditSuccess(t *testing.T) {
 
 	rewardRepo := &rewardRepoMock{}
 
-	svc := NewRewardService(memberRepo, rewardRepo)
+	svc := newTestRewardService(memberRepo, rewardRepo)
 
 	reward, err := svc.CreateReward(context.Background(), dto.RewardRequest{
 		MemberID:    1,
@@ -90,7 +103,7 @@ func TestCreateReward_RedemptionSuccess(t *testing.T) {
 
 	rewardRepo := &rewardRepoMock{}
 
-	svc := NewRewardService(memberRepo, rewardRepo)
+	svc := newTestRewardService(memberRepo, rewardRepo)
 
 	reward, err := svc.CreateReward(context.Background(), dto.RewardRequest{
 		MemberID:    1,
@@ -106,10 +119,13 @@ func TestCreateReward_RedemptionSuccess(t *testing.T) {
 	if reward.Points != -50 {
 		t.Errorf("expected -50 points for redemption, got %d", reward.Points)
 	}
+	if !rewardRepo.isRedemption {
+		t.Error("expected debit point type to use redemption repository flow")
+	}
 }
 
 func TestCreateReward_InvalidPointType(t *testing.T) {
-	svc := NewRewardService(&memberRepoMock{}, &rewardRepoMock{})
+	svc := newTestRewardService(&memberRepoMock{}, &rewardRepoMock{})
 
 	reward, err := svc.CreateReward(context.Background(), dto.RewardRequest{
 		MemberID:    1,
@@ -127,8 +143,41 @@ func TestCreateReward_InvalidPointType(t *testing.T) {
 	}
 }
 
+func TestCreateReward_ConfiguredPointTypeDirection(t *testing.T) {
+	rewardRepo := &rewardRepoMock{}
+	svc := NewRewardService(&memberRepoMock{}, rewardRepo, map[int]config.PointTypeConfig{
+		5: config.PointTypeCredit,
+		6: config.PointTypeDebit,
+	})
+
+	for _, testCase := range []struct {
+		pointTypeID int
+		wantPoints  int64
+		wantDebit   bool
+	}{
+		{pointTypeID: 5, wantPoints: 100},
+		{pointTypeID: 6, wantPoints: -100, wantDebit: true},
+	} {
+		reward, err := svc.CreateReward(context.Background(), dto.RewardRequest{
+			MemberID:    1,
+			PointTypeID: testCase.pointTypeID,
+			Points:      100,
+			Description: "Configured point type",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error for point type %d: %v", testCase.pointTypeID, err)
+		}
+		if reward.Points != testCase.wantPoints {
+			t.Errorf("point type %d: expected %d points, got %d", testCase.pointTypeID, testCase.wantPoints, reward.Points)
+		}
+		if rewardRepo.isRedemption != testCase.wantDebit {
+			t.Errorf("point type %d: expected redemption flow %t, got %t", testCase.pointTypeID, testCase.wantDebit, rewardRepo.isRedemption)
+		}
+	}
+}
+
 func TestCreateReward_InvalidPoints(t *testing.T) {
-	svc := NewRewardService(&memberRepoMock{}, &rewardRepoMock{})
+	svc := newTestRewardService(&memberRepoMock{}, &rewardRepoMock{})
 
 	reward, err := svc.CreateReward(context.Background(), dto.RewardRequest{
 		MemberID:    1,
@@ -147,7 +196,7 @@ func TestCreateReward_InvalidPoints(t *testing.T) {
 }
 
 func TestCreateReward_EmptyDescription(t *testing.T) {
-	svc := NewRewardService(&memberRepoMock{}, &rewardRepoMock{})
+	svc := newTestRewardService(&memberRepoMock{}, &rewardRepoMock{})
 
 	reward, err := svc.CreateReward(context.Background(), dto.RewardRequest{
 		MemberID:    1,
@@ -169,7 +218,7 @@ func TestCreateReward_MemberNotFound(t *testing.T) {
 	rewardRepo := &rewardRepoMock{
 		err: utils.ErrMemberNotFound,
 	}
-	svc := NewRewardService(&memberRepoMock{}, rewardRepo)
+	svc := newTestRewardService(&memberRepoMock{}, rewardRepo)
 
 	reward, err := svc.CreateReward(context.Background(), dto.RewardRequest{
 		MemberID:    99,
@@ -198,7 +247,7 @@ func TestCreateReward_RepositoryError(t *testing.T) {
 		err: expectedErr,
 	}
 
-	svc := NewRewardService(memberRepo, rewardRepo)
+	svc := newTestRewardService(memberRepo, rewardRepo)
 
 	reward, err := svc.CreateReward(context.Background(), dto.RewardRequest{
 		MemberID:    1,
@@ -238,7 +287,7 @@ func TestGetRewardsByMemberID_Success(t *testing.T) {
 		},
 	}
 
-	svc := NewRewardService(memberRepo, rewardRepo)
+	svc := newTestRewardService(memberRepo, rewardRepo)
 
 	rewards, err := svc.GetRewardsByMemberID(context.Background(), 1)
 
@@ -266,7 +315,7 @@ func TestGetRewardsByMemberID_EmptyList(t *testing.T) {
 
 	rewardRepo := &rewardRepoMock{}
 
-	svc := NewRewardService(memberRepo, rewardRepo)
+	svc := newTestRewardService(memberRepo, rewardRepo)
 
 	rewards, err := svc.GetRewardsByMemberID(context.Background(), 1)
 
@@ -288,7 +337,7 @@ func TestGetRewardsByMemberID_MemberNotFound(t *testing.T) {
 		err: utils.ErrMemberNotFound,
 	}
 
-	svc := NewRewardService(memberRepo, &rewardRepoMock{})
+	svc := newTestRewardService(memberRepo, &rewardRepoMock{})
 
 	rewards, err := svc.GetRewardsByMemberID(context.Background(), 99)
 

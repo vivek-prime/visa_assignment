@@ -39,7 +39,7 @@ func main() {
 
 	// 4. Initialize Services
 	memberService := service.NewMemberService(memberRepo, rewardRepo)
-	rewardService := service.NewRewardService(memberRepo, rewardRepo)
+	rewardService := service.NewRewardService(memberRepo, rewardRepo, config.GetConfig().PointTypes)
 
 	// 5. Initialize Controllers
 	memberController := controller.NewMemberController(memberService, rewardService)

@@ -34,9 +34,16 @@ The configuration loader expects the database key `connectionString` and a top-l
 database:
   connectionString: "server=localhost;port=1433;database=vivek_db;trusted_connection=yes;encrypt=disable;trustservercertificate=true"
 port: 8080
+point_types:
+  1: credit
+  2: credit
+  3: credit
+  4: debit
 ```
 
-Update the connection string for your SQL Server and authentication method. The YAML currently checked in uses `connection_string` and places `port` under `database`; those keys do not match the configuration struct and should be changed to the format above.
+Update the connection string for your SQL Server and authentication method.
+
+`point_types` maps each `point_type_id` to its direction. Use `credit` or `debit`; credits add points and debits subtract points and use the balance-checked redemption transaction. Add a new ID and its direction here to support a new point type without changing service logic.
 
 If `port` is omitted or set to `0`, the HTTP server listens on port `8080`.
 

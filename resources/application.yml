@@ -1,3 +1,8 @@
 database:
-  connection_string: "server=localhost;port=1433;database=vivek_db;trusted_connection=yes;encrypt=disable;trustservercertificate=true"
+  connectionString: "server=localhost;port=1433;database=vivek_db;trusted_connection=yes;encrypt=disable;trustservercertificate=true"
 port: 8080
+point_types:
+  1: credit # Purchase Earning
+  2: credit # Referral Bonus Earning
+  3: credit # Cashback Earning
+  4: debit # Purchase Redemption

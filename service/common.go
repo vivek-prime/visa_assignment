@@ -1,21 +1,15 @@
 package service
 
-import "visa_assignment/constants"
+import "visa_assignment/config"
 
-// isValidPointType checks if the point_type_id is between 1 and 4
-func isValidPointType(pointTypeID int) bool {
-	switch pointTypeID {
-	case constants.PointTypePurchaseEarning,
-		constants.PointTypeReferralBonus,
-		constants.PointTypeCashback,
-		constants.PointTypeRedemption:
-		return true
-	default:
-		return false
-	}
+func isPointTypeDebit(pointTypeID int, pointTypeMap map[int]config.PointTypeConfig) bool {
+	return pointTypeMap[pointTypeID] == config.PointTypeDebit
 }
 
-// isRedemption returns true if the point type is a debit/redemption (point_type_id == 4)
-func isRedemption(pointTypeID int) bool {
-	return pointTypeID == constants.PointTypeRedemption
+func isValidPointType(pointTypeID int, pointTypeMap map[int]config.PointTypeConfig) bool {
+	if _, ok := pointTypeMap[pointTypeID]; !ok {
+		return false
+	}
+
+	return true
 }

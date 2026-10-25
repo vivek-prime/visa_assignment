@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"visa_assignment/config"
 	"visa_assignment/constants"
 	dto "visa_assignment/models/dto"
 	entity "visa_assignment/models/entity"
@@ -21,30 +22,29 @@ type RewardService interface {
 type rewardService struct {
 	memberRepo repository.MemberRepository
 	rewardRepo repository.RewardRepository
+	pointTypes map[int]config.PointTypeConfig
 }
 
-func NewRewardService(memberRepo repository.MemberRepository, rewardRepo repository.RewardRepository) RewardService {
+func NewRewardService(
+	memberRepo repository.MemberRepository,
+	rewardRepo repository.RewardRepository,
+	pointTypes map[int]config.PointTypeConfig,
+) RewardService {
 	return &rewardService{
 		memberRepo: memberRepo,
 		rewardRepo: rewardRepo,
+		pointTypes: pointTypes,
 	}
 }
 
 func (s *rewardService) CreateReward(ctx context.Context, req dto.RewardRequest) (*entity.RewardEntity, error) {
-	if err := validateRewardRequest(&req); err != nil {
-		zerolog.Ctx(ctx).Warn().
-			Int64("member_id", req.MemberID).
-			Int("point_type_id", req.PointTypeID).
-			Int64("points", req.Points).
-			Err(err).
-			Msg("Reward request validation failed")
+	if err := s.validateRewardRequest(ctx, &req); err != nil {
 		return nil, err
 	}
 
-	// applies the sign based on point_type_id
-	// Credits (1, 2, 3) are positive; Redemption (4) is negative
+	// Credit entries are positive; debit entries are negative.
 	signedPoints := req.Points
-	if isRedemption(req.PointTypeID) {
+	if isPointTypeDebit(req.PointTypeID, s.pointTypes) {
 		signedPoints = -req.Points
 	}
 
@@ -56,9 +56,8 @@ func (s *rewardService) CreateReward(ctx context.Context, req dto.RewardRequest)
 		EventDate:   utils.GetCurrentTime(),
 	}
 
-	// For redemptions (point_type_id == 4), CreateRedemption locks the member row,
-	// verifies member existence, checks available balance, and inserts atomically.
-	if isRedemption(req.PointTypeID) {
+	// Debit entries lock the member row, verify member existence and balance, and insert atomically.
+	if s.pointTypes[req.PointTypeID] == config.PointTypeDebit {
 		if err := s.rewardRepo.Create(ctx, reward, true); err != nil {
 			return nil, err
 		}
@@ -92,8 +91,8 @@ func (s *rewardService) GetRewardsByMemberID(ctx context.Context, memberID int64
 	return rewards, nil
 }
 
-func validateRewardRequest(req *dto.RewardRequest) error {
-	if !isValidPointType(req.PointTypeID) {
+func (s *rewardService) validateRewardRequest(ctx context.Context, req *dto.RewardRequest) error {
+	if !isValidPointType(req.PointTypeID, s.pointTypes) {
 		return utils.ErrInvalidPointType
 	}
 
@@ -103,6 +102,7 @@ func validateRewardRequest(req *dto.RewardRequest) error {
 
 	req.Description = strings.TrimSpace(req.Description)
 	if req.Description == constants.Empty {
+		zerolog.Ctx(ctx).Warn().Msg("description field is empty, setting to default description")
 		return utils.ErrInvalidInput
 	}
 
