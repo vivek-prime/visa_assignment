@@ -62,11 +62,13 @@ The table DDL is in [`resources/ddl/members.sql`](resources/ddl/members.sql) and
 
 ## Run
 
-From the repository root:
+From the repository root, start the API with one command:
 
-```powershell
-go run .
+```bat
+run.bat
 ```
+
+`run.bat` starts the service using `resources/application.yml`. SQL Server must be reachable and the `vivek_db` tables must already exist; see [Configuration](#configuration) and [Database](#database).
 
 The service connects to SQL Server before starting the HTTP listener. Startup and database connection failures are logged as structured zerolog events.
 
